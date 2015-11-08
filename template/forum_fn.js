@@ -1,3 +1,5 @@
+/* global phpbb */
+
 /**
 * phpBB3 forum functions
 */
@@ -39,12 +41,12 @@ function popup(url, width, height, name) {
 function pageJump(item) {
 	'use strict';
 
-	var page = item.val(),
+	var page = parseInt(item.val(), 10),
 		perPage = item.attr('data-per-page'),
 		baseUrl = item.attr('data-base-url'),
 		startName = item.attr('data-start-name');
 
-	if (page !== null && !isNaN(page) && page == Math.floor(page) && page > 0) {
+	if (page !== null && !isNaN(page) && page === Math.floor(page) && page > 0) {
 		if (baseUrl.indexOf('?') === -1) {
 			document.location.href = baseUrl + '?' + startName + '=' + ((page - 1) * perPage);
 		} else {
@@ -131,7 +133,7 @@ function activateSubPanel(p, panels) {
 
 	var i, showPanel;
 
-	if (typeof(p) === 'string') {
+	if (typeof p === 'string') {
 		showPanel = p;
 	}
 	$('input[name="show_panel"]').val(showPanel);
@@ -161,7 +163,11 @@ function selectCode(a) {
 		// Safari and Chrome
 		if (s.setBaseAndExtent) {
 			var l = (e.innerText.length > 1) ? e.innerText.length - 1 : 1;
-			s.setBaseAndExtent(e, 0, e, l);
+			try {
+				s.setBaseAndExtent(e, 0, e, l);
+			} catch (error) {
+				s.setBaseAndExtent(e, 0, e, 1);
+			}
 		}
 		// Firefox and Opera
 		else {
@@ -284,8 +290,7 @@ jQuery(function($) {
 /**
 * Functions for user search popup
 */
-function insertUser(formId, value)
-{
+function insertUser(formId, value) {
 	'use strict';
 
 	var $form = jQuery(formId),
@@ -293,7 +298,7 @@ function insertUser(formId, value)
 		fieldName = $form.attr('data-field-name'),
 		item = opener.document.forms[formName][fieldName];
 
-	if (item.value.length && item.type == 'textarea') {
+	if (item.value.length && item.type === 'textarea') {
 		value = item.value + '\n' + value;
 	}
 
@@ -416,6 +421,7 @@ function checkNavigation(force)
 		if (nav.responsive) {
 			nav.canToggle.show();
 			nav.responsiveClones.hide();
+			nav.menu.removeClass('showing-responsive-menu');
 			if (!nav.alwaysShowMenu) {
 				nav.menu.show();
 			}
@@ -464,6 +470,9 @@ function checkNavigation(force)
 		nav.responsive = hiding;
 		if (!hiding && !nav.alwaysShowMenu) {
 			nav.menu.hide();
+		}
+		else if (hiding) {
+			nav.menu.addClass('showing-responsive-menu');
 		}
 	}
 
@@ -516,7 +525,7 @@ function parseDocument($container) {
 	'use strict';
 
 	var test = document.createElement('div'),
-		oldBrowser = (typeof test.style.borderRadius == 'undefined'),
+		oldBrowser = (typeof test.style.borderRadius === 'undefined'),
 		$body = $('body');
 
 	/**
@@ -559,7 +568,9 @@ function parseDocument($container) {
 	*/
 	$container.find('.nav-tabs[data-current-page]').each(function() {
 		var tabs = $(this),
-			current = tabs.attr('data-current-page');
+			current = tabs.attr('data-current-page'),
+			found = false,
+			content, classes, i, key;
 
 		$('.tab[data-select-match]', this).each(function() {
 			var matches = $(this).attr('data-select-match').split(','),
@@ -574,10 +585,42 @@ function parseDocument($container) {
 						tabs.find('.tab.selected').removeClass('selected');
 						item.addClass('selected');
 					}
+					found = true;
 					return false;
 				}
 			}
 		});
+
+		// Check for known extensions
+		if (found) {
+			return;
+		}
+
+		content = $container.find('.content.pages-content');
+		if (content.length) {
+			// Get page content class, try to find matching link
+			classes = content.prop('class').split(' ');
+			for (i = 0; i < classes.length && !found; i++) {
+				key = classes[i].trim();
+				if (key !== 'content' && key !== 'pages-content') {
+					$container.find('.tab.pages.' + key).each(function() {
+						tabs.find('.tab.selected').removeClass('selected');
+						$(this).addClass('selected');
+						found = true;
+					});
+				}
+			}
+			if (found) {
+				return;
+			}
+
+			// Get first page link
+			$container.find('.tab.pages:first').each(function() {
+				tabs.find('.tab.selected').removeClass('selected');
+				$(this).addClass('selected');
+				found = true;
+			});
+		}
 	});
 
 	/**
@@ -617,7 +660,10 @@ function parseDocument($container) {
 	*/
 	if (oldBrowser) {
 		// Fix .linklist.bulletin lists
-		$container.find('ul.linklist.bulletin > li:first-child, ul.linklist.bulletin > li.rightside:last-child').addClass('no-bulletin');
+		$container
+			.find('ul.linklist.bulletin > li')
+			.filter(':first-child, .rightside:last-child')
+			.addClass('no-bulletin');
 	}
 
 	/**
@@ -698,13 +744,13 @@ function parseDocument($container) {
 				width;
 
 			// Test max-width set in code for .navlinks above
-			width = parseInt($this.css('max-width'));
+			width = parseInt($this.css('max-width'), 10);
 			if (!width) {
- 				width = $body.width();
+				width = $body.width();
 			}
 
 			throttled = false;
-			maxHeight = parseInt($this.css('line-height'));
+			maxHeight = parseInt($this.css('line-height'), 10);
 			$links.each(function() {
 				if ($(this).height() > 0) {
 					maxHeight = Math.max(maxHeight, $(this).outerHeight(true));
@@ -731,8 +777,8 @@ function parseDocument($container) {
 				return;
 			}
 
-			for (var i = 0; i < classesLength; i ++) {
-				for (var j = length - 1; j >= 0; j --) {
+			for (var i = 0; i < classesLength; i++) {
+				for (var j = length - 1; j >= 0; j--) {
 					$links.eq(j).addClass('wrapped ' + classes[i]);
 					if ($this.height() <= maxHeight) {
 						return;
@@ -764,7 +810,9 @@ function parseDocument($container) {
 	/**
 	* Responsive link lists
 	*/
-	$container.find('.linklist:not(.navlinks, [data-skip-responsive]), .postbody .post-buttons:not([data-skip-responsive])').each(function() {
+	var selector = '.linklist:not(.navlinks, [data-skip-responsive]),' +
+		'.postbody .post-buttons:not([data-skip-responsive])';
+	$container.find(selector).each(function() {
 		var $this = $(this),
 			filterSkip = '.breadcrumbs, [data-skip-responsive]',
 			filterLast = '.edit-icon, .quote-icon, [data-last-responsive]',
@@ -772,7 +820,7 @@ function parseDocument($container) {
 			$linksNotSkip = $linksAll.not(filterSkip), // All items that can potentially be hidden
 			$linksFirst = $linksNotSkip.not(filterLast), // The items that will be hidden first
 			$linksLast = $linksNotSkip.filter(filterLast), // The items that will be hidden last
-			persistent = $this.attr('id') == 'nav-main', // Does this list already have a menu (such as quick-links)?
+			persistent = $this.attr('id') === 'nav-main', // Does this list already have a menu (such as quick-links)?
 			html = '<li class="responsive-menu hidden"><a href="javascript:void(0);" class="responsive-menu-link">&nbsp;</a><div class="dropdown hidden"><div class="pointer"><div class="pointer-inner" /></div><ul class="dropdown-contents" /></div></li>',
 			slack = 3; // Vertical slack space (in pixels). Determines how sensitive the script is in determining whether a line-break has occured.
 
@@ -991,7 +1039,7 @@ function parseDocument($container) {
 				$children = column.children(),
 				html = column.html();
 
-			if ($children.length == 1 && $children.text() == column.text()) {
+			if ($children.length === 1 && $children.text() === column.text()) {
 				html = $children.html();
 			}
 
@@ -1033,8 +1081,7 @@ function parseDocument($container) {
 			if (!$block.length) {
 				$this.find('dt > .list-inner').append('<div class="responsive-show" style="display:none;" />');
 				$block = $this.find('dt .responsive-show:last-child');
-			}
-			else {
+			} else {
 				first = ($.trim($block.text()).length === 0);
 			}
 
@@ -1044,7 +1091,7 @@ function parseDocument($container) {
 					children = column.children(),
 					html = column.html();
 
-				if (children.length == 1 && children.text() == column.text()) {
+				if (children.length === 1 && children.text() === column.text()) {
 					html = children.html();
 				}
 
@@ -1073,7 +1120,7 @@ function parseDocument($container) {
 		// Find each header
 		$th.each(function(column) {
 			var cell = $(this),
-				colspan = parseInt(cell.attr('colspan')),
+				colspan = parseInt(cell.attr('colspan'), 10),
 				dfn = cell.attr('data-dfn'),
 				text = dfn ? dfn : cell.text();
 
@@ -1104,14 +1151,14 @@ function parseDocument($container) {
 				cells = row.children('td'),
 				column = 0;
 
-			if (cells.length == 1) {
+			if (cells.length === 1) {
 				row.addClass('big-column');
 				return;
 			}
 
 			cells.each(function() {
 				var cell = $(this),
-					colspan = parseInt(cell.attr('colspan')),
+					colspan = parseInt(cell.attr('colspan'), 10),
 					text = $.trim(cell.text());
 
 				if (headersLength <= column) {
@@ -1187,19 +1234,26 @@ function parseDocument($container) {
 				total = $availableTabs.length,
 				i, $tab;
 
-			for (i = total - 1; i >= 0; i --) {
+			for (i = total - 1; i >= 0; i--) {
 				$tab = $availableTabs.eq(i);
 				$menu.prepend($tab.clone(true).removeClass('tab'));
 				$tab.hide();
 				if ($this.height() <= maxHeight) {
-					$menu.find('a').click(function() { check(true); });
+					$menu.find('a').click(function() {
+						check(true);
+					});
 					return;
 				}
 			}
-			$menu.find('a').click(function() { check(true); });
+			$menu.find('a').click(function() {
+				check(true);
+			});
 		}
 
-		phpbb.registerDropdown($item.find('a.responsive-tab-link'), $item.find('.dropdown'), {visibleClass: 'activetab'});
+		var $tabLink = $item.find('a.responsive-tab-link');
+		phpbb.registerDropdown($tabLink, $item.find('.dropdown'), {
+			visibleClass: 'activetab'
+		});
 
 		check(true);
 		$(window).resize(check);
@@ -1355,85 +1409,6 @@ function parseDocument($container) {
 			$w.on('hashchange', function() { check(true); });
 		});
 	}
-
-	/**
-	* Elegant forums list
-	*/
-	$container.find('.forabg[data-standard-layout]').each(function() {
-		var $this = $(this),
-			colon, comma, html;
-
-		if ($this.attr('data-standard-layout') == '1' || $this.hasClass('elegant')) {
-			return;
-		}
-
-		$this.addClass('elegant');
-		colon = $this.attr('data-colon');
-		comma = $this.attr('data-comma');
-
-		$this.find('ul.topiclist dt').each(function() {
-			var $this = $(this),
-				item = false;
-
-			if ($this.parents('li.header').length) {
-				return;
-			}
-
-			// Find item to append to
-			$this.find('.forum-description:last').each(function() {
-				$(this).after('<div class="forum-statistics" />');
-				item = $(this).next();
-			})
-
-			if (item === false) {
-				$this.find('.list-inner > .responsive-show:last').each(function() {
-					$(this).before('<div class="forum-statistics" />');
-					item = $(this).prev();
-				});
-			}
-
-			if (item === false) {
-				$this.find('.list-inner > a:last').each(function() {
-					$(this).after('<div class="forum-statistics" />');
-					item = $(this).next();
-				});
-			}
-
-			if (item === false) {
-				$this.find('.list-inner').each(function() {
-					$(this).append('<div class="forum-statistics" />');
-					item = $(this).children('.forum-statistics:last');
-				});
-			}
-
-			if (item === false) {
-				return;
-			}
-
-			// Append columns content
-			html = '';
-			$this.siblings('dd.posts, dd.topics, dd.views').each(function(i) {
-				var dfn = $(this).find('dfn'),
-					text = $(this).text(),
-					dfnText;
-
-				if (i > 0) {
-					html += '<span class="comma">' + comma + '</span>';
-				}
-
-				if (dfn.length == 1) {
-					dfnText = dfn.html().trim();
-					html += '<span class="dfn">' + dfnText + '</span>' + colon;
-					text = text.replace(dfnText, '');
-				}
-				html += '<span class="value">' + text.trim() + '</span>';
-			});
-			item.html(html);
-
-			$this.find('.list-inner > .responsive-show:not(.forum-lastpost)').remove();
-			$this.parent().addClass('elegant-row');
-		})
-	});
 
 	/**
 	* Empty last post column

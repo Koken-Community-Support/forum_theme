@@ -43,6 +43,9 @@ table {
 	border-collapse: collapse;
 	border-spacing: 0;
 }
+abbr {
+	text-decoration: none;
+}
 
 // Useful stuff
 %clearfix {
@@ -69,6 +72,7 @@ body {
 	word-wrap: break-word;
 	min-height: 100%;
 	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
 }
 
 $h1-font-size:		$font-size + 10px !default;
@@ -440,6 +444,12 @@ $nav-alert-font-size:		9px !default;
 			}
 			#quick-links {
 				margin: 0;
+				&.empty {
+					display: none;
+				}
+				&.showing-responsive-menu {
+					display: block;
+				}
 			}
 		}
 
@@ -739,6 +749,39 @@ $nav-alert-font-size:		9px !default;
 				@extend %glyph-fa;
 				content: '\f234';	// fa-user-plus
 			}
+		}
+
+		// Commonly used links for extensions
+		.boardrules .nav-link {
+			&:after {
+				@extend %glyph-fa;
+				content: '\f071';	// fa-exclamation-triangle
+			}
+		}
+		.leftside .boardrules .nav-link {
+			@extend %glyph;
+			@media (max-width: 550px) {
+				@extend %glyph-only-media;
+			}
+		}
+		.rightside .boardrules .nav-link {
+			@extend %glyph-only;
+		}
+
+		.pages .nav-link {
+			&:after {
+				@extend %glyph-fa;
+				content: '\f0f6';	// fa-file-text-o
+			}
+		}
+		.leftside .pages .nav-link {
+			@extend %glyph;
+			@media (max-width: 550px) {
+				@extend %glyph-only-media;
+			}
+		}
+		.rightside .pages .nav-link {
+			@extend %glyph-only;
 		}
 	}
 
